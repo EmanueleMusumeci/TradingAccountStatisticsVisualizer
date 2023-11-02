@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Balance visualizer</title>
+    <style>
+        .deposit {
+            color: green;
+        }
+
+        .withdrawal {
+            color: red;
+        }
+
+        /* Define CSS styles for circular areas */
+        .area {
+            border: 1px solid #999; /* Dark gray border */
+            border-radius: 10px; /* Rounded corners for a circular appearance */
+            padding: 20px;
+            margin: 20px;
+            background: #f5f5f5; /* Very light gray background */
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2); /* Add a subtle shadow */
+            font-family: Arial, sans-serif; /* Set the font family */
+        }
+
+        /* Style for titles */
+        .area h3 {
+            text-align: center;
+            border-bottom: 1px solid #999; /* Thin separator line below the title */
+            margin-bottom: 10px; /* Add some space below the separator */
+            padding-bottom: 15px;
+        }
+
+        /* Style for the scrollable content */
+        .scrollable-content {
+            max-height: 300px; /* Define the maximum height for scrollable area */
+            overflow-y: auto; /* Enable vertical scrolling when content overflows */
+        }
+
+        /* Style for buttons */
+        button {
+            background: #007BFF; /* Blue background color */
+            color: white; /* White text color */
+            padding: 10px 20px;
+            border: solid 1px white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: Arial, sans-serif; /* Set the font family */
+        }
+
+        /* Style for disabled buttons */
+        button:disabled {
+            background: #ccc; /* Gray background for disabled buttons */
+            cursor: not-allowed; /* Show not-allowed cursor for disabled buttons */
+        }
+
+        /* Style for the table with alternating row colors */
+        .styled-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .styled-table th {
+            background-color: #f0f0f0; /* Light gray header background */
+        }
+
+        .styled-table th,
+        .styled-table td {
+            padding: 8px;
+            border: 1px solid #999; /* Lighter gray border for cells */
+        }
+
+        .styled-table tbody tr:nth-child(even) {
+            background-color: #f8f8f8; /* Alternating row background color */
+        }
+
+        .styled-table tbody tr:nth-child(odd) {
+            background-color: #ffffff; /* Alternating row background color */
+        }
+
+
+        /* Style for input fields */
+        input[type="date"],
+        input[type="number"] {
+            padding: 5px;
+            border: 1px solid #ccc; /* Light gray border */
+            border-radius: 5px;
+        }
+
+        /* Style for the separator above the canvas */
+        .separator-above-canvas {
+            border-top: 1px solid #999; /* Thin separator line above the canvas */
+            margin-top: 20px; /* Add some space above the separator */
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center; font-family: Arial, sans-serif;">Account Balance Visualization</h1>
+
+    <!-- Account statement upload Area -->
+    <div class="area" id="accountStatementArea">
+        <h3>Upload an Account Statement</h3>
+        <label for="accountType">Select Account Type:</label>
+        <select id="accountType">
+            <option value="eToro">eToro</option>
+            <option value="Binance">Binance</option>
+        </select>
+        <form id="uploadForm">
+            <label for="accountStatementFileInput">Upload a <span id="fileTypeText">PDF</span> File:</label>
+            <input type="file" id="accountStatementFileInput" accept=".pdf, .txt">
+        </form>
+
+        <div id="result">
+            <!-- Display extracted daily balance here -->
+        </div>
+    </div>
+
+<!-- Cash Flows Area -->
+<div class="area" id="cashFlowArea">
+    <h3>Cash Flows</h3>
+    <table id="cashFlowInputFields">
+        <tr>
+            <td>Date: <input type="date" id="cashFlowDate"></td>
+            <td>Amount: <input type="number" id="cashFlowAmount"></td>
+            <td id="transaction-type"></td>
+            <td><button id="deleteAllButton">🗑 Clear All</button></td>
+            <td><button id="addDeposit">+ Add Deposit</button><button id="addWithdraw">- Add Withdrawal</button></td>
+        </tr>
+    </table>
+    <button id="cashFlowUpdateBalanceButton">Apply</button>
+    <div class="scrollable-content">
+        <table id="cashFlowsTable" class="styled-table scrollable-content">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="3" style="text-align: center;">No cash flow data</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Balances Table Area -->
+<div class="area" id="balancesArea">
+    <h3>Balances</h3>
+    <table id="balancesInputFields">
+        <tr>
+            <td>Date: <input type="date" id="balanceDate"></td>
+            <td>Balance: <input type="number" id="balanceAmount"></td>
+            <td><button id="addBalance">+ Add Balance</button></td>
+        </tr>
+    </table>
+    <div class="scrollable-content">
+        <table id="balancesTable" class="styled-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="2" style="text-align: center;">No balance data</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+    <!-- Yearly Average Computation Area -->
+    <div class="area" id="accountStatisticsArea">
+        <h3>Account Statistics</h3>
+        <p>Yearly Average Balance: <span id="yearly-average">N/A</span></p>
+        <p>Final Balance (on 31st December of the same year): <span id="final-balance">N/A</span></p>
+    </div>
+
+    <div class="area" id="commandsArea">
+        <button id="resetButton">Reset Data</button>
+        <button id="downloadButton" disabled>Download Data</button>
+        <button id="uploadButton" disabled>Upload Data</button>
+    </div>
+
+    <canvas id="balancesGraph" width="400" height="200"></canvas>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.0.943/pdf.min.js"></script>
+    <script src="utils.js"></script>
+    <script src="account_data.js"></script>
+    <script src="storage.js"></script>
+    <script src="account_statement_processing.js"></script>
+    <script>
+//TODO Interactive Brokers
+//TODO reset all data button (replaces clear cash flows button)
+//TODO balance with/without equities
+//TODO cash flows should be "applied" to current balances by overwriting balances and recomputing from cash flows
+//TODO account statistics (final balance and average) should be computed automatically every time data is modified
+//TODO uploading an account statement should reset all the other data
+//TODO download txt with all data
+//TODO support viewing separate trading accounts and viewing aggregated data
+//TODO interactive graph (hovering with mouse shows dot over graph at current coordinate and tooltip with value)
+//TODO add some way to freeze the page while elaborating and track progress
+
+        //const ratesEndpoint = "http://api.exchangeratesapi.io/v1/";
+        //const ratesAPIkey = "c9b603162444cd5ad266ccec717146e1";
+        //const convertCurrencyCheckbox = document.getElementById("convertCurrency");
+
+        
+        //-----------
+        //| Storage |
+        //-----------
+        // Load data from localStorage when the page has been loaded (if available)
+        window.addEventListener("load", function(event) {
+            loadDataFromLocalStorage(updateVisualizedData);
+            updateVisualizedData();
+        });
+
+
+        //---------------------
+        //| Account statement |
+        //---------------------
+        //Account platform choice combobox
+        document.getElementById("accountType").addEventListener("change", function (evt) {
+            const selectedAccountType = evt.target.value;
+            document.getElementById("fileTypeText").textContent = selectedAccountType === "Binance" ? ".txt" : "PDF";
+        });
+
+        //Account statement file upload
+        const accountStatementFileInput = document.getElementById("accountStatementFileInput");
+        accountStatementFileInput.addEventListener("change", async (e) => {
+            e.preventDefault();
+            var file = accountStatementFileInput.files[0];
+            const accountType = document.getElementById("accountType").value;
+            processAccountStatementFile(file, accountType, updateDataCallback)
+            
+        });
+
+
+        //--------------------
+        //| Cash flows table |
+        //--------------------
+        const cashFlowDateInput = document.getElementById("cashFlowDate");
+        const cashFlowAmountInput = document.getElementById("cashFlowAmount");
+        
+        //Cash flow deposit button
+        document.getElementById("addDeposit").addEventListener("click", () => {
+            addCashFlow(new Date(cashFlowDateInput.value).getTime(), parseFloat(cashFlowAmountInput.value), true)
+        });
+        
+        //Cash flow withdraw button
+        document.getElementById("addWithdraw").addEventListener("click", () => {
+            addCashFlow(new Date(cashFlowDateInput.value).getTime(), parseFloat(cashFlowAmountInput.value), false)
+        });
+        
+
+        //------------------
+        //| Balances table |
+        //------------------
+        const balanceDateInput = document.getElementById("balanceDate");
+        const balanceAmountInput = document.getElementById("balanceAmount");
+
+        //Cash flow deposit button
+        document.getElementById("addBalance").addEventListener("click", () => {
+            addBalance(new Date(balanceDateInput.value).getTime(), parseFloat(balanceAmountInput.value), true)
+        });
+
+        //--------------------
+        //| Control commands |
+        //--------------------
+        //Reset all data button
+        document.getElementById("resetButton").addEventListener("click", () => {resetData()});
+
+
+        //-----------------
+        //| Balance graph |
+        //-----------------
+        //...        
+    </script>
+</body>
+</html>
